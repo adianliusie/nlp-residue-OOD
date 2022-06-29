@@ -19,15 +19,16 @@ class KMeansSelector():
         Returns tensor of CLS embeddings at the correct layer
         Does this in batches
         '''
-        CLS = []
+        emb = []
         ds = TensorDataset(input_ids, mask)
         dl = DataLoader(ds, batch_size=bs)
         with torch.no_grad():
             for id, m in dl:
                 id = id.to(device)
                 m = m.to(device)
-                layer_embeddings = model(id, m)
-                CLS_embeddings = layer_embeddings[:,0,:].squeeze(dim=1)
-                CLS.append(CLS_embeddings.cpu())
-        embeddings = torch.cat(CLS)
+                trans_output = model.transformer(id, m)
+                H = trans_output.last_hidden_state  #[bsz, L, 768] 
+                h = H[:, 0]                         #[bsz, 768] 
+                emb.append(h.cpu())
+        embeddings = torch.cat(h)
         return embeddings
