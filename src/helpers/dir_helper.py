@@ -12,13 +12,11 @@ from scipy.stats import pearsonr, spearmanr
 from ..utils.json_utils import load_json, save_json
 
 class DirHelper():
-    def __init__(self, exp_path:str=None, temp:bool=False):
-        if temp:
-            print("using temp directory")
-            self.exp_path = 'trained_models/temp'
+    def __init__(self, exp_path:str=None):
+        self.exp_path = exp_path
+
+        if exp_path.split('/')[:2] == ['trained_models', 'temp']:
             self.del_temp_dir()
-        else:
-            self.exp_path = exp_path
         
         self.abs_path = os.path.abspath(self.exp_path)
         self.set_up_dir()

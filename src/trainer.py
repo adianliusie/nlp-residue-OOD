@@ -18,7 +18,7 @@ class Trainer():
     """"base class for running basic transformer classification models"""
     
     def __init__(self, exp_name:str, m_args:namedtuple):
-        self.dir = DirHelper(exp_name, m_args.temp)
+        self.dir = DirHelper(exp_name)
         self.dir.save_args('model_args.json', m_args)
         self.set_up_helpers(m_args)
         
@@ -45,7 +45,7 @@ class Trainer():
         train, dev, test = self.data_loader(t_args.data_set, t_args.lim)
         
         if t_args.ranking:
-            ranker = make_ranker(t_args.ranking)
+            ranker = make_ranker(t_args.ranking, t_args.data_rand_seed)
             train  = ranker(train)
             print(len(train))
             N = int(t_args.ret_frac*len(train))

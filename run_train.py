@@ -8,9 +8,11 @@ from src.trainer import Trainer
 #### ArgParse for Model details
 model_parser = argparse.ArgumentParser(description='Arguments for system and model configuration')
 
+temp_dir = 'trained_models/temp'
 group = model_parser.add_mutually_exclusive_group(required=True)
 group.add_argument('--exp_name', type=str,         help='name to save the experiment as')
-group.add_argument('--temp', action='store_true',  help='if set, exp will be saved in temp dir', )
+group.add_argument('--temp', action='store_const',  const=temp_dir, dest='exp_name', help='if set, the exp_name is temp')
+#group.add_argument('--temp', action='store_true',  help='if set, exp will be saved in temp dir', )
 
 model_parser.add_argument('--transformer',  default='bert',     type=str,  help='[bert, roberta, electra ...]')
 model_parser.add_argument('--max_len',      default=512,        type=int,  help='max length of transformer inputs')
@@ -30,8 +32,9 @@ train_parser.add_argument('--epochs',  default=2,     type=int,     help='numer 
 train_parser.add_argument('--lr',      default=1e-5,  type=float,   help='training learning rate')
 train_parser.add_argument('--bsz',     default=8,     type=int,     help='training batch size')
 
-train_parser.add_argument('--ranking',  default=None,       type=str,   help='[random, length]')
-train_parser.add_argument('--ret_frac', default=1,          type=float, help='retention fraction for data pruning')
+train_parser.add_argument('--ranking',        default=None,   type=str,   help='[random, length]')
+train_parser.add_argument('--ret_frac',       default=1,      type=float, help='retention fraction for data pruning')
+train_parser.add_argument('--data_rand_seed', default=1,   type=int,   help='sets random seed for data experiments')
 
 train_parser.add_argument('--optim',   default='adamw', type=str,  help='[adam, adamw, sgd]')
 train_parser.add_argument('--wandb',   default=None,    type=str,  help='experiment name to use for wandb (and to enable)')
@@ -39,8 +42,10 @@ train_parser.add_argument('--wandb',   default=None,    type=str,  help='experim
 train_parser.add_argument('--no_save', action='store_false', dest='save', help='whether to not save model')
 
 if __name__ == '__main__':
-    model_args = model_parser.parse_known_args()[0]
-    train_args = train_parser.parse_known_args()[0]
+    model_args, other_args_1 = model_parser.parse_known_args()
+    train_args, other_args_2 = train_parser.parse_known_args()
+    
+    assert set(other_args_1).isdisjoint(other_args_2), f"{set(other_args_1) & set(other_args_2)}"
     
     pprint.pprint(model_args.__dict__)
     print()
@@ -55,11 +60,7 @@ if __name__ == '__main__':
             shutil.rmtree(exp_name)
 
     # Train system
-    if model_args.num_seeds == 1:
-        trainer = Trainer(model_args.exp_name, model_args)
+    for i in range(model_args.num_seeds):
+        exp_name = model_args.exp_name + '/' + str(i)
+        trainer = Trainer(exp_name, model_args)
         trainer.train(train_args)
-    else:
-        for i in range(model_args.num_seeds):
-            exp_name = model_args.exp_name + '/' + str(i)
-            trainer = Trainer(exp_name, model_args)
-            trainer.train(train_args)
