@@ -32,7 +32,7 @@ train_parser.add_argument('--epochs',  default=2,     type=int,     help='numer 
 train_parser.add_argument('--lr',      default=1e-5,  type=float,   help='training learning rate')
 train_parser.add_argument('--bsz',     default=8,     type=int,     help='training batch size')
 
-train_parser.add_argument('--ranking',        default=None,   type=str,   help='[random, length]')
+train_parser.add_argument('--ranker',         default=None,   type=str,   help='[random, length, loss]')
 train_parser.add_argument('--ret_frac',       default=1,      type=float, help='retention fraction for data pruning')
 train_parser.add_argument('--data_rand_seed', default=1,   type=int,   help='sets random seed for data experiments')
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     if model_args.force:
         exp_name = model_args.exp_name
         exp_folders = exp_name.split('/')
-        if exp_folders[0] == 'trained_models' and os.path.isdir(exp_name) and len(exp_folders)>2:
+        if exp_folders[0] == 'trained_models' and os.path.isdir(exp_name) and len(exp_folders)>=2:
             shutil.rmtree(exp_name)
 
     # Train system

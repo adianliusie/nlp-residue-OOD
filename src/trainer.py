@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 from .helpers import DataLoader, DirHelper, Batcher, make_ranker
 from .utils.torch_utils import no_grad
-from .model import TransformerModel, GloveAvgModel, GloveBilstmModel
+from .models import select_model
 
 class Trainer():
     """"base class for running basic transformer classification models"""
@@ -29,13 +29,7 @@ class Trainer():
         self.data_loader = DataLoader(m_args.transformer)
         self.batcher = Batcher(max_len=m_args.max_len)
         
-        if m_args.transformer == 'glove_avg':
-            self.model = GloveAvgModel(trans_name=m_args.transformer)
-        elif m_args.transformer == 'glove_bilstm':
-            self.model = GloveBilstmModel(trans_name=m_args.transformer)
-        else:
-            self.model = TransformerModel(trans_name=m_args.transformer)
-            
+        self.model = select_model(model_name=m_args.transformer)
         self.device = m_args.device
                  
     def train(self, t_args:namedtuple):
@@ -44,13 +38,11 @@ class Trainer():
  
         train, dev, test = self.data_loader(t_args.data_set, t_args.lim)
         
-        if t_args.ranking:
-            ranker = make_ranker(t_args.ranking, t_args.data_rand_seed)
-            train  = ranker(train)
-            print(len(train))
+        if t_args.ranker:
+            ranker = make_ranker(t_args.ranker, t_args.data_rand_seed)
+            train  = ranker(train, t_args.ret_frac)
             N = int(t_args.ret_frac*len(train))
             train  = train[:N]
-            print(len(train))
             
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=t_args.lr)
         best_epoch = (-1, 10000, 0)

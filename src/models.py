@@ -6,6 +6,15 @@ from types import SimpleNamespace
 from .utils.torch_utils import load_transformer, load_transformer
 from .utils.glove_utils import get_glove
 
+def select_model(model_name, num_classes=2):
+    if model_name == 'glove_avg':
+        model = GloveAvgModel(num_classes=num_classes)
+    elif model_name == 'glove_bilstm':
+        model = GloveBilstmModel(num_classes=num_classes)
+    else:
+        model = TransformerModel(trans_name=model_name, num_classes=num_classes)
+    return model
+
 class TransformerModel(torch.nn.Module):
     """basic transformer model for multi-class classification""" 
     def __init__(self, trans_name:str, num_classes:int=2):
@@ -23,7 +32,7 @@ class TransformerModel(torch.nn.Module):
     
 class GloveAvgModel(torch.nn.Module):
     """ glove word sverage model """
-    def __init__(self, trans_name:str, num_classes:int=2):
+    def __init__(self, num_classes:int=2):
         super().__init__()
         glove_dict, glove_embeddings = get_glove()
         self.embeddings = nn.Embedding.from_pretrained(glove_embeddings)
@@ -38,7 +47,7 @@ class GloveAvgModel(torch.nn.Module):
 
 class GloveBilstmModel(torch.nn.Module):
     """ glove word sverage model """
-    def __init__(self, trans_name:str, num_classes:int=2):
+    def __init__(self, num_classes:int=2):
         super().__init__()
         glove_dict, glove_embeddings = get_glove()
         self.embeddings = nn.Embedding.from_pretrained(glove_embeddings)
