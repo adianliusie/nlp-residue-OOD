@@ -101,7 +101,7 @@ class LossPruner(ModelDataPruner):
         loss = F.cross_entropy(y, label).item()
         return float(loss)
         
-class KMeans(ModelDataPruner):
+class KMeansPruner(ModelDataPruner):
     '''
         View samples in encoder embedding space
         PCA compression of samples
