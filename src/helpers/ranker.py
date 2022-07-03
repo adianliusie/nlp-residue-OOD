@@ -126,17 +126,19 @@ class KMeans(ModelDataPruner):
         # K means clustering
         kmeans = KMeans(n_clusters=N, random_state=0).fit(compressed)
         
-        # Select closest to mean per cluster - NEEDS CHANGING
+        # Select closest to mean per cluster
         cluster_means = kmeans.cluster_centers_
-        cluster_labels = kmeans.cluster_labels_
-        selected_samples = []
+        # cluster_labels = kmeans.cluster_labels_
+        selected_inds = []
         for k in N:
-            valid_samples = compressed[cluster_labels==k]
-            valid_mean = cluster_means[k]
-            diff_l2 = np.linalg.norm(valid_samples - valid_mean, axis=1)
+            # mask = cluster_labels == k
+            # mask_scaler = ((mask-1)*10000000)+1
+            mean_vector = cluster_means[k]
+            diff_l2 = np.linalg.norm(compressed - mean_vector, axis=1)
+            # diff_l2 = np.linalg.norm(compressed - mean_vector, axis=1) * mask_scaler
             ind = np.argmin(diff_l2)
-            selected_samples.append(valid_samples[ind])
-        return np.stack(selected_samples)
+            selected_inds.append(ind)
+        return [data[ind] for ind in selected_inds]
         
 
     def get_hidden_vecs(self, data):
