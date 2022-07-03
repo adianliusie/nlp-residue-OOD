@@ -11,6 +11,10 @@ from abc import ABC, abstractmethod
 from .dir_helper import DirHelper
 from ..models import select_model
 from ..utils.torch_utils import no_grad
+import numpy as np
+
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 
 def make_ranker(ranker_name:str, *args):
     if ranker_name == 'random':
@@ -97,21 +101,43 @@ class LossPruner(ModelDataPruner):
         loss = F.cross_entropy(y, label).item()
         return float(loss)
         
-class VyasKMeans(ModelDataPruner):
+class KMeans(ModelDataPruner):
+    '''
+        View samples in encoder embedding space
+        PCA compression of samples
+        K-Means clustering
+        Select K samples (closest to each cluster mean)
+    '''
     def __init__(self, seed_num:int=1):
         super().__init__(seed_num)
         model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/temp/0'   
         self.load_model(model_path)
      
-    def filter_data(self, data:List, ret_frac:float)->List:
+    def filter_data(self, data:List, ret_frac:float, ncomps:int=10)->List:
         N = int(ret_frac*len(data))
         
-        ### write your code here
+        # Encoder embedding space
         H = self.get_hidden_vecs(data)
+
+        # PCA compression
+        pca = PCA(n_components=ncomps)
+        compressed = pca.fit_transform(H)
+
+        # K means clustering
+        kmeans = KMeans(n_clusters=N, random_state=0).fit(compressed)
         
-        #...
-        ######
-        return data[:N]
+        # Select closest to mean per cluster - NEEDS CHANGING
+        cluster_means = kmeans.cluster_centers_
+        cluster_labels = kmeans.cluster_labels_
+        selected_samples = []
+        for k in N:
+            valid_samples = compressed[cluster_labels==k]
+            valid_mean = cluster_means[k]
+            diff_l2 = np.linalg.norm(valid_samples - valid_mean, axis=1)
+            ind = np.argmin(diff_l2)
+            selected_samples.append(valid_samples[ind])
+        return np.stack(selected_samples)
+        
 
     def get_hidden_vecs(self, data):
         H = [self.model_output(ex).h[0] for ex in data]
