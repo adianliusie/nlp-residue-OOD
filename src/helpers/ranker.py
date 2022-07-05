@@ -31,8 +31,9 @@ def make_ranker(ranker_name:str, *args):
 ### Super DataPruner Classes #########################################################
 class DataPruner(ABC):
     """ base class for all rankers """
-    def __init__(self, seed_num:int=1):
-        random.seed(seed_num)
+    def __init__(self, seed_num:int=None):
+        if seed_num:
+            random.seed(seed_num)
     
     def rank_data(self, data:List)->List:
         data_copy = deepcopy(data)
@@ -92,7 +93,7 @@ class LossPruner(ModelDataPruner):
     """ ranks all examples based on the loss of a model trained already on the examples """
     def __init__(self, seed_num:int=1):
         super().__init__(seed_num)
-        model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/temp/0'   
+        model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/boolq/baseline/0'   
         self.load_model(model_path)
      
     def get_ex_score(self, ex)->float:
@@ -110,7 +111,7 @@ class KMeansPruner(ModelDataPruner):
     '''
     def __init__(self, seed_num:int=1):
         super().__init__(seed_num)
-        model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/temp/0'   
+        model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/boolq/baseline/0'   
         self.load_model(model_path)
      
     def filter_data(self, data:List, ret_frac:float, ncomps:int=10)->List:

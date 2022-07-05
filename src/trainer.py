@@ -41,8 +41,7 @@ class Trainer():
         if t_args.ranker:
             ranker = make_ranker(t_args.ranker, t_args.data_rand_seed)
             train  = ranker(train, t_args.ret_frac)
-            N = int(t_args.ret_frac*len(train))
-            train  = train[:N]
+            print(f'filtered to {len(train)}')
             
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=t_args.lr)
         best_epoch = (-1, 10000, 0)
@@ -85,8 +84,11 @@ class Trainer():
 
             ######  TEST  #################################
             perf = self.system_eval(test, epoch, mode='test')
-        
-        print(f'best dev epoch: {best_epoch}')
+            
+            if epoch - best_epoch[0] >= 5:
+                break
+                
+        self.dir.log(f'best dev epoch: {best_epoch}')
 
     def model_output(self, batch):
         if getattr(self, 'bias', False):
@@ -101,10 +103,10 @@ class Trainer():
         hits = torch.argmax(output.y, dim=-1) == batch.labels
         hits = torch.sum(hits[batch.labels != -100]).item()
         num_preds = torch.sum(batch.labels != -100).item()
-                
+
         return SimpleNamespace(loss=loss, y=output.y,
                                hits=hits, num_preds=num_preds)
-    
+
     ############# EVAL METHODS ####################################
     @no_grad
     def system_eval(self, data, epoch:int, mode='dev'):
@@ -144,10 +146,16 @@ class Trainer():
 
         # save experiment config details
         cfg = {}
+        
         cfg['epochs']      = args.epochs
         cfg['bsz']         = args.bsz
         cfg['lr']          = args.lr
         cfg['transformer'] = self.model_args.transformer
+        
+        cfg['transformer'] = args.data_set
+        cfg['ret_frac']    = args.ret_frac
+        cfg['ranker']      = args.ranker
+       
         wandb.config.update(cfg) 
         wandb.watch(self.model)
         

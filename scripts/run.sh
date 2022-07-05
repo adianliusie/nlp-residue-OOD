@@ -6,6 +6,7 @@ conda activate torch1.8
 
 unset LD_PRELOAD
 export CUDA_VISIBLE_DEVICES=$X_SGE_CUDA_DEVICE
+echo $CUDA_VISIBLE_DEVICES
 
 python ../run_train.py $@
 

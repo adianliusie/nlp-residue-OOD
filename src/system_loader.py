@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 from tqdm import tqdm
+from typing import List
 
 from .trainer import Trainer
 from .utils.torch_utils import no_grad
@@ -27,14 +28,14 @@ class SystemLoader(Trainer):
         self.device = 'cuda:0'
         self.to(self.device)
 
-    def load_preds(self, data_name, mode):
+    def load_preds(self, data_name:str, mode)->dict:
         probs = self.load_probs(data_name, mode)
         preds = {}
         for k, probs in probs.items():
             preds[k] = int(np.argmax(probs, axis=-1))  
         return preds
         
-    def load_probs(self, data_name, mode):
+    def load_probs(self, data_name:str, mode)->dict:
         """loads predictions if saved, else generates"""
         if not self.dir.probs_exists(data_name, mode):
             self.set_up_helpers()
@@ -42,12 +43,12 @@ class SystemLoader(Trainer):
         probs = self.dir.load_probs(data_name, mode)
         return probs
 
-    def generate_probs(self, data_name, mode):
+    def generate_probs(self, data_name:str, mode):
         probabilties = self._probs(data_name, mode)
         self.dir.save_probs(probabilties, data_name, mode)
 
     @no_grad
-    def _probs(self, data_name, mode='test'):
+    def _probs(self, data_name:str, mode='test'):
         """get model predictions for given data"""
         self.model.eval()
         self.to(self.device)
@@ -64,43 +65,14 @@ class SystemLoader(Trainer):
             probabilties[sample_id] = y.cpu().numpy()
         return probabilties
     
-    def _get_eval_batches(self, data_name, mode='test'):
+    def _get_eval_batches(self, data_name:str, mode='test'):
         #get eval data- data_loader returns (train, dev, test) so index
         eval_data = self.data_loader.get_data_split(data_name, mode)
         eval_batches = self.batcher(data=eval_data, bsz=1, shuffle=False)
         return eval_batches
-
-    def load_formatted_preds(self, formatting, data_name, mode):
-        probs = self.load_formatted_probs(formatting, data_name, mode)
-        preds = {}
-        for k, probs in probs.items():
-            preds[k] = int(np.argmax(probs, axis=-1))  
-        return preds
-    
-    def load_formatted_probs(self, formatting:str, data_name:str, mode:str):
-        """ evaluates the model in the different formatting set up"""
-        #if same as default formatting, return default function
-        if formatting == self.dir.load_args('model_args.json').formatting:
-            return self.load_probs(data_name, mode)
-        
-        #if predictions not cached, generate and cache them
-        if not self.dir.probs_exists(data_name, mode, dir_name=formatting):
-            self.set_up_helpers()
-            og_formatting = self.data_loader.formatting
-            
-            self.data_loader.formatting = formatting
-            probs = self._probs(data_name, mode)
-            self.dir.make_dir(formatting)
-            self.dir.save_probs(probs, data_name, mode, dir_name=formatting)
-            
-            self.data_loader.formatting = og_formatting
-        
-        #return predictions for this evaluation mode
-        probs = self.dir.load_probs(data_name, mode, dir_name=formatting)
-        return probs
-            
+ 
     @staticmethod
-    def load_labels(data_name, mode='test'):
+    def load_labels(data_name:str, mode='test')->dict:
         split_index = {'train':0, 'dev':1, 'test':2}
         eval_data = load_data(data_name)[split_index[mode]]
         
@@ -110,7 +82,7 @@ class SystemLoader(Trainer):
         return labels_dict
 
     @staticmethod
-    def load_inputs(data_name, mode='test'):
+    def load_inputs(data_name:str, mode='test')->dict:
         split_index = {'train':0, 'dev':1, 'test':2}
         eval_data = load_data(data_name)[split_index[mode]]
         
@@ -125,7 +97,7 @@ class EnsembleLoader(SystemLoader):
         self.paths  = [f'{exp_path}/{seed}' for seed in os.listdir(exp_path)]
         self.seeds  = [SystemLoader(seed_path) for seed_path in self.paths]
     
-    def load_probs(self, data_name, mode)->dict:
+    def load_probs(self, data_name:str, mode)->dict:
         seed_probs = [seed.load_probs(data_name, mode) for seed in self.seeds]
 
         conv_ids = seed_probs[0].keys()
@@ -137,23 +109,7 @@ class EnsembleLoader(SystemLoader):
             probs = np.mean(probs, axis=0)
             ensemble[conv_id] = probs
         return ensemble    
-
-    def load_formatted_probs(self, formatting, data_name, mode)->dict:
-        seed_probs = [seed.load_formatted_probs(formatting, data_name, mode) for seed in self.seeds]
-        
-        conv_ids = seed_probs[0].keys()
-        assert all([i.keys() == conv_ids for i in seed_probs])
-
-        ensemble = {}
-        for conv_id in conv_ids:
-            probs = [seed[conv_id] for seed in seed_probs]
-            probs = np.mean(probs, axis=0)
-            ensemble[conv_id] = probs
-        return ensemble    
     
-    def load_formatted_preds(self, formatting, data_name, mode):
-        probs = self.load_formatted_probs(formatting, data_name, mode)
-        preds = {}
-        for k, probs in probs.items():
-            preds[k] = int(np.argmax(probs, axis=-1))
-        return preds
+    def load_seed_preds(self, data_name:str, mode='test')->List[dict]:
+        return [seed.load_preds(data_name, mode) for seed in self.seeds]
+    

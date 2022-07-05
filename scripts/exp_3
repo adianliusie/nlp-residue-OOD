@@ -1,0 +1,11 @@
+./submit.sh --data_set imdb --epochs 10 --ranker loss --ret_frac 0.5 --num_seeds 3 --wandb data_pruning --exp_name trained_models/first_runs/imdb/loss/0.5
+
+sleep 2
+
+./submit.sh --data_set imdb --epochs 20 --ranker loss --ret_frac 0.1 --num_seeds 3 --wandb data_pruning --exp_name trained_models/first_runs/imdb/loss/0.1
+
+sleep 2
+
+./submit.sh --data_set imdb --epochs 40 --ranker loss --ret_frac 0.02 --num_seeds 3 --wandb data_pruning --exp_name trained_models/first_runs/imdb/loss/0.02
+
+

@@ -28,13 +28,13 @@ train_parser.add_argument('--data_set',  default='imdb',  type=str,  help='')
 train_parser.add_argument('--lim',       default=None,    type=int, help='size of data subset to use (for debugging)')
 train_parser.add_argument('--print_len', default=100,     type=int,  help='logging training print size')
 
-train_parser.add_argument('--epochs',  default=2,     type=int,     help='numer of epochs to train')
+train_parser.add_argument('--epochs',  default=50,    type=int,     help='numer of epochs to train')
 train_parser.add_argument('--lr',      default=1e-5,  type=float,   help='training learning rate')
 train_parser.add_argument('--bsz',     default=8,     type=int,     help='training batch size')
 
 train_parser.add_argument('--ranker',         default=None,   type=str,   help='[random, length, loss]')
 train_parser.add_argument('--ret_frac',       default=1,      type=float, help='retention fraction for data pruning')
-train_parser.add_argument('--data_rand_seed', default=1,   type=int,   help='sets random seed for data experiments')
+train_parser.add_argument('--data_rand_seed', default=None,   type=int,   help='sets random seed for data experiments')
 
 train_parser.add_argument('--optim',   default='adamw', type=str,  help='[adam, adamw, sgd]')
 train_parser.add_argument('--wandb',   default=None,    type=str,  help='experiment name to use for wandb (and to enable)')
