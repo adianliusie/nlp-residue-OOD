@@ -23,8 +23,8 @@ def make_ranker(ranker_name:str, *args):
         return LengthPruner() 
     elif ranker_name == 'loss':
         return LossPruner()
-    elif ranker_name == 'vyas':
-        return VyasKMeans()
+    elif ranker_name == 'kmeans':
+        return KMeansPruner()
     else:
         raise ValueError("invalid ranking option")
 
