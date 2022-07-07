@@ -131,7 +131,7 @@ class KMeansPruner(ModelDataPruner):
         cluster_means = kmeans.cluster_centers_
         # cluster_labels = kmeans.cluster_labels_
         selected_inds = []
-        for k in N:
+        for k in range(N):
             # mask = cluster_labels == k
             # mask_scaler = ((mask-1)*10000000)+1
             mean_vector = cluster_means[k]
