@@ -32,26 +32,26 @@ class Trainer():
         self.model = select_model(model_name=m_args.transformer)
         self.device = m_args.device
                  
-    def train(self, t_args:namedtuple):
-        self.dir.save_args('train_args.json', t_args)
-        if t_args.wandb: self.set_up_wandb(t_args)
+    def train(self, args:namedtuple):
+        self.dir.save_args('train_args.json', args)
+        if args.wandb: self.set_up_wandb(args)
  
-        train, dev, test = self.data_loader(t_args.data_set, t_args.lim)
+        train, dev, test = self.data_loader(args.data_set, args.lim)
         
-        if t_args.ranker:
-            ranker = make_ranker(t_args.ranker, t_args.data_rand_seed)
-            train  = ranker(train, t_args.ret_frac, balance=True)
+        if args.ranker:
+            ranker = make_ranker(args.ranker, args.data_rand_seed)
+            train  = ranker(train, args.ret_frac, balance=True)
             print(f'filtered to {len(train)}')
             
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=t_args.lr)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=args.lr)
         best_epoch = (-1, 10000, 0)
         self.to(self.device)
         
-        for epoch in range(t_args.epochs):
+        for epoch in range(args.epochs):
             ######  TRAINING  ##############################
             self.model.train()
             self.dir.reset_metrics()
-            train_b = self.batcher(data=train, bsz=t_args.bsz, shuffle=True)
+            train_b = self.batcher(data=train, bsz=args.bsz, shuffle=True)
             
             for k, batch in enumerate(train_b, start=1):
                 output = self.model_output(batch)
@@ -66,30 +66,32 @@ class Trainer():
                                             num_preds=output.num_preds)
                 
                 # print train performance every now and then
-                if k%t_args.print_len == 0:
+                if k%args.print_len == 0:
                     perf = self.dir.print_perf('train', epoch, k)
-                    if t_args.wandb:
+                    if args.wandb:
                          wandb.log({'epoch':epoch, 'loss':perf.loss, 'acc':perf.acc})
             
             ######  DEV  ##################################
             self.model.eval()
             perf = self.system_eval(dev, epoch, mode='dev')
-            if t_args.wandb:
+            if args.wandb:
                 wandb.log({"dev_loss":perf.loss, "dev_acc":perf.acc})
 
+            ######  TEST  #################################
+            test_perf = self.system_eval(test, epoch, mode='test')
+            
             # save performance if best dev performance 
             if perf.acc > best_epoch[2]:
                 best_epoch = (epoch, perf.loss, perf.acc)
-                if t_args.save: self.save_model()
-
-            ######  TEST  #################################
-            perf = self.system_eval(test, epoch, mode='test')
-            
+                if args.save: self.save_model()
+                else: self.generate_probs(data=test, data_name=args.data_set)
+                
             if epoch - best_epoch[0] >= 5:
                 break
-                
+             
         self.dir.log(f'best dev epoch: {best_epoch}')
-
+        return test_perf
+    
     def model_output(self, batch):
         if getattr(self, 'bias', False):
             return self.bias_model_output(batch)
@@ -98,7 +100,7 @@ class Trainer():
                             attention_mask=batch.mask)
                 
         loss = F.cross_entropy(output.y, batch.labels)
-            
+        
         # return accuracy metrics
         hits = torch.argmax(output.y, dim=-1) == batch.labels
         hits = torch.sum(hits[batch.labels != -100]).item()
@@ -118,8 +120,30 @@ class Trainer():
             self.dir.update_acc_metrics(hits=output.hits, 
                                         num_preds=output.num_preds)
         perf = self.dir.print_perf(mode, epoch, 0)
-        return perf    
+        return perf
 
+    def generate_probs(self, data:list, data_name:str):
+        probabilties = self._probs(data)
+        self.dir.save_probs(probabilties, data_name, mode='test')
+
+    @no_grad
+    def _probs(self, data):
+        """get model predictions for given data"""
+        self.model.eval()
+        self.to(self.device)
+        eval_batches = self.batcher(data=data, bsz=1, shuffle=False)
+
+        probabilties = {}
+        for batch in eval_batches:
+            sample_id = batch.sample_id[0]
+            output = self.model_output(batch)
+
+            y = output.y.squeeze(0)
+            if y.shape and y.shape[-1] > 1:  # Get probabilities of predictions
+                y = F.softmax(y, dim=-1)
+            probabilties[sample_id] = y.cpu().numpy()
+        return probabilties
+    
     #############  MODEL UTILS  ###################################
     
     def save_model(self, name:str='base'):
@@ -152,7 +176,7 @@ class Trainer():
         cfg['lr']          = args.lr
         cfg['transformer'] = self.model_args.transformer
         
-        cfg['transformer'] = args.data_set
+        cfg['data_set']    = args.data_set
         cfg['ret_frac']    = args.ret_frac
         cfg['ranker']      = args.ranker
        
