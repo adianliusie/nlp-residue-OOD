@@ -40,7 +40,7 @@ class Trainer():
         
         if t_args.ranker:
             ranker = make_ranker(t_args.ranker, t_args.data_rand_seed)
-            train  = ranker(train, t_args.ret_frac)
+            train  = ranker(train, t_args.ret_frac, balance=True)
             print(f'filtered to {len(train)}')
             
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=t_args.lr)

@@ -24,7 +24,7 @@ model_parser.add_argument('--force',      action='store_true',  help='if set, wi
 #### ArgParse for Training details
 train_parser = argparse.ArgumentParser(description='Arguments for training the system')
 
-train_parser.add_argument('--data_set',  default='imdb',  type=str,  help='')
+train_parser.add_argument('--data_set',  default='boolq', type=str,  help='')
 train_parser.add_argument('--lim',       default=None,    type=int, help='size of data subset to use (for debugging)')
 train_parser.add_argument('--print_len', default=100,     type=int,  help='logging training print size')
 

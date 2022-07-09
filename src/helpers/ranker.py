@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from typing import List
 from types import SimpleNamespace
 from copy import deepcopy
-
+from collections import defaultdict
 from abc import ABC, abstractmethod
 
 from .dir_helper import DirHelper
@@ -35,6 +35,15 @@ class DataPruner(ABC):
         if seed_num:
             random.seed(seed_num)
     
+    def balanced_filtering(self, data:List, ret_frac:float)->List:
+        classes_data = defaultdict(list)
+        for ex in data:
+            classes_data[ex.label].append(ex)
+        output = []
+        for class_name, class_data in classes_data.items():
+            output += self.filter_data(class_data, ret_frac)
+        return output
+    
     def rank_data(self, data:List)->List:
         data_copy = deepcopy(data)
         data_copy = sorted(data_copy, key=lambda x: self.get_ex_score(x), reverse=True)
@@ -46,10 +55,13 @@ class DataPruner(ABC):
     def filter_data(self, data:List, ret_frac:float)->List:
         N = int(ret_frac*len(data))
         data = self.rank_data(data)
-        return data[:N]   
+        return data[:N]
 
-    def __call__(self, *args, **kwargs):
-        return self.filter_data(*args, **kwargs)
+    def __call__(self, *args, balance=True, **kwargs):
+        if balance:
+            return self.balanced_filtering(*args, **kwargs)
+        else:
+            return self.filter_data(*args, **kwargs)
 
 class ModelDataPruner(DataPruner, ABC):
     def load_model(self, exp_path):
@@ -68,13 +80,7 @@ class ModelDataPruner(DataPruner, ABC):
         ids = torch.LongTensor(ex.ids[:self.max_len]).unsqueeze(0)
         ids = ids.to('cuda')
         return self.model(ids)
-    
-    def filter_data(self, *args, **kwargs)->List:
-        """ overwriting parent to free model gpu memory after use """
-        output = super().filter_data(*args, **kwargs)
-        self.model.to('cpu')
-        torch.cuda.empty_cache() 
-        return output
+
     
 ### Basic Rankers ###############################################################
 class LengthPruner(DataPruner):
