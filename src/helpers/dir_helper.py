@@ -15,7 +15,7 @@ class DirHelper():
     def __init__(self, exp_path:str=None):
         self.exp_path = exp_path
 
-        if exp_path.split('/')[:2] == ['trained_models', 'temp']:
+        if exp_path == 'trained_models/temp/0':
             self.del_temp_dir()
         
         self.abs_path = os.path.abspath(self.exp_path)

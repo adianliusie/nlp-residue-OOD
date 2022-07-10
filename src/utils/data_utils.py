@@ -7,10 +7,10 @@ from datasets import load_dataset
 
 ### Main Data Loading Method #############################################################
 def load_data(data_name:str, lim:int=None)->Tuple['train', 'dev', 'test']:
-    if data_name == 'imdb':   train, dev, test = _load_imdb()
-    if data_name == 'yelp':   train, dev, test = _load_yelp()
-    if data_name == 'boolq':  train, dev, test = _load_boolq()
-    if data_name == 'paws':   train, dev, test = _load_paws()
+    if   data_name == 'imdb':   train, dev, test = _load_imdb()
+    elif data_name == 'yelp':   train, dev, test = _load_yelp()
+    elif data_name == 'boolq':  train, dev, test = _load_boolq()
+    elif data_name == 'paws':   train, dev, test = _load_paws()
 
     else: raise ValueError('invalid dataset provided')
         

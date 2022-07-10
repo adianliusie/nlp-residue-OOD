@@ -23,6 +23,8 @@ def make_ranker(ranker_name:str, *args):
         return LengthPruner() 
     elif ranker_name == 'loss':
         return LossPruner()
+    elif ranker_name == 'low_loss':
+        return LowLossPruner()
     elif ranker_name == 'kmeans':
         return KMeansPruner()
     else:
@@ -107,7 +109,11 @@ class LossPruner(ModelDataPruner):
         y = self.model_output(ex).y
         loss = F.cross_entropy(y, label).item()
         return float(loss)
-        
+
+class LowLossPruner(LossPruner):
+    def get_ex_score(self, ex)->float:
+        return -1* super().get_ex_score(ex)
+    
 class KMeansPruner(ModelDataPruner):
     '''
         View samples in encoder embedding space

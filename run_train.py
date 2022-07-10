@@ -47,10 +47,8 @@ if __name__ == '__main__':
     
     assert set(other_args_1).isdisjoint(other_args_2), f"{set(other_args_1) & set(other_args_2)}"
     
-    pprint.pprint(model_args.__dict__)
-    print()
-    pprint.pprint(train_args.__dict__)
-    print()
+    pprint.pprint(model_args.__dict__), print()
+    pprint.pprint(train_args.__dict__), print()
     
     # Overwrites directory if it exists
     if model_args.force:
@@ -64,3 +62,18 @@ if __name__ == '__main__':
         exp_name = model_args.exp_name + '/' + str(i)
         trainer = Trainer(exp_name, model_args)
         trainer.train(train_args)
+
+    ### Logging Performance(for HPC where I can't rerun) ########################################
+    from src.system_loader import EnsembleLoader
+    from src.utils.evaluation import get_seed_accuracy
+    
+    system = EnsembleLoader(model_args.exp_name) 
+    labels = EnsembleLoader.load_labels(train_args.data_set, mode='test')
+    seed_preds  = system.load_seed_preds(train_args.data_set, mode='test')
+    mean, std = get_seed_accuracy(seed_preds, labels)
+    
+    with open(f'{model_args.exp_name}/test.txt', 'x+') as f:
+        f.write(f'mean: {mean:.3f}  std:  {std:.3f}' )
+    #############################################################################################
+        
+    
