@@ -45,6 +45,12 @@ class DirHelper():
     def exp_name(self):
         return self.exp_path.replace('trained_models/','')
     
+    @property
+    def base_name(self):
+        dirs = self.exp_name.split('/')
+        base_name = '/'.join(dirs[:-1])
+        return base_name
+    
     def del_temp_dir(self):
         """deletes the temp, unsaved experiments directory"""
         if os.path.isdir('trained_models/temp'): 

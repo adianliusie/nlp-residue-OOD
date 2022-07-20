@@ -22,9 +22,9 @@ def make_ranker(ranker_name:str, *args):
     elif ranker_name == 'length':
         return LengthPruner() 
     elif ranker_name == 'loss':
-        return LossPruner()
+        return LossPruner(*args)
     elif ranker_name == 'low_loss':
-        return LowLossPruner()
+        return LowLossPruner(*args)
     elif ranker_name == 'kmeans':
         return KMeansPruner()
     else:
@@ -33,9 +33,8 @@ def make_ranker(ranker_name:str, *args):
 ### Super DataPruner Classes #########################################################
 class DataPruner(ABC):
     """ base class for all rankers """
-    def __init__(self, seed_num:int=None):
-        if seed_num:
-            random.seed(seed_num)
+    def __init__(self):
+        pass
     
     def balanced_filtering(self, data:List, ret_frac:float)->List:
         classes_data = defaultdict(list)
@@ -65,7 +64,11 @@ class DataPruner(ABC):
         else:
             return self.filter_data(*args, **kwargs)
 
+default_model = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/boolq/baseline/0'  
 class ModelDataPruner(DataPruner, ABC):
+    def __init__(self, model_path:str=default_model):
+        self.load_model(model_path)
+        
     def load_model(self, exp_path):
         dir_ = DirHelper.load_dir(exp_path)
         args = dir_.load_args('model_args.json')
@@ -91,6 +94,10 @@ class LengthPruner(DataPruner):
         return len(ex.ids)
 
 class RandomPruner(DataPruner):
+    def __init__(self, seed_num:int=None):
+        if seed_num:
+            random.seed(seed_num)
+    
     """ ranks all examples in a random order based on the seed """
     def get_ex_score(self, ex:SimpleNamespace)->float:
         return random.random()
@@ -99,10 +106,6 @@ class RandomPruner(DataPruner):
 
 class LossPruner(ModelDataPruner):
     """ ranks all examples based on the loss of a model trained already on the examples """
-    def __init__(self, seed_num:int=1):
-        super().__init__(seed_num)
-        model_path = '/home/alta/Conversational/OET/al826/2022/shortcuts/data_pruning/trained_models/boolq/baseline/0'   
-        self.load_model(model_path)
      
     def get_ex_score(self, ex)->float:
         label = torch.LongTensor([ex.label]).to('cuda')

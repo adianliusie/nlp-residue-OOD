@@ -52,8 +52,9 @@ class SystemLoader(Trainer):
         """get model predictions for given data"""
         self.model.eval()
         self.to(self.device)
-        eval_batches = self._get_eval_batches(data_name, mode)
-
+        eval_data = self.data_loader.get_data_split(data_name, mode)
+        eval_batches = self.batcher(data=eval_data, bsz=1, shuffle=False)
+        
         probabilties = {}
         for batch in tqdm(eval_batches):
             sample_id = batch.sample_id[0]
@@ -65,12 +66,6 @@ class SystemLoader(Trainer):
             probabilties[sample_id] = y.cpu().numpy()
         return probabilties
     
-    def _get_eval_batches(self, data_name:str, mode='test'):
-        #get eval data- data_loader returns (train, dev, test) so index
-        eval_data = self.data_loader.get_data_split(data_name, mode)
-        eval_batches = self.batcher(data=eval_data, bsz=1, shuffle=False)
-        return eval_batches
- 
     @staticmethod
     def load_labels(data_name:str, mode='test')->dict:
         split_index = {'train':0, 'dev':1, 'test':2}
@@ -94,7 +89,7 @@ class SystemLoader(Trainer):
 class EnsembleLoader(SystemLoader):
     def __init__(self, exp_path:str):
         self.exp_path = exp_path
-        self.paths  = [f'{exp_path}/{seed}' for seed in os.listdir(exp_path)]
+        self.paths  = [f'{exp_path}/{seed}' for seed in os.listdir(exp_path) if os.path.isdir(f'{exp_path}/{seed}')]
         self.seeds  = [SystemLoader(seed_path) for seed_path in self.paths]
     
     def load_probs(self, data_name:str, mode)->dict:

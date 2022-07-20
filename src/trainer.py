@@ -165,8 +165,9 @@ class Trainer():
     ############  WANDB UTILS  ####################################
     
     def set_up_wandb(self, args:namedtuple):
-        wandb.init(project=args.wandb, entity="adian", reinit=True,
-                   name=self.dir.exp_name, dir=self.dir.abs_path)
+        wandb.init(project=args.wandb, entity="adian",
+                   name=self.dir.exp_name, group=self.dir.base_name, 
+                   dir=self.dir.abs_path, reinit=True)
 
         # save experiment config details
         cfg = {}
