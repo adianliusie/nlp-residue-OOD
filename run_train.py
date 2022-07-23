@@ -17,6 +17,7 @@ group.add_argument('--temp', action='store_const',  const=temp_dir, dest='exp_na
 model_parser.add_argument('--transformer',  default='bert',     type=str,  help='[bert, roberta, electra ...]')
 model_parser.add_argument('--max_len',      default=512,        type=int,  help='max length of transformer inputs')
 model_parser.add_argument('--device',       default='cuda',     type=str,  help='device to use [cuda, cpu]')
+model_parser.add_argument('--num_classes',  default=2,        type=int,  help='number of unique label classes')
 
 model_parser.add_argument('--num_seeds',  default=1,            type=int,  help='number of seeds to train')
 model_parser.add_argument('--force',      action='store_true',  help='if set, will overwrite any existing directory')
@@ -24,17 +25,13 @@ model_parser.add_argument('--force',      action='store_true',  help='if set, wi
 #### ArgParse for Training details
 train_parser = argparse.ArgumentParser(description='Arguments for training the system')
 
-train_parser.add_argument('--data_set',  default='boolq', type=str,  help='')
+train_parser.add_argument('--data_set',  default='imdb', type=str,  help='')
 train_parser.add_argument('--lim',       default=None,    type=int, help='size of data subset to use (for debugging)')
 train_parser.add_argument('--print_len', default=100,     type=int,  help='logging training print size')
 
 train_parser.add_argument('--epochs',  default=50,    type=int,     help='numer of epochs to train')
 train_parser.add_argument('--lr',      default=1e-5,  type=float,   help='training learning rate')
 train_parser.add_argument('--bsz',     default=8,     type=int,     help='training batch size')
-
-train_parser.add_argument('--ranker',         default=None,   type=str,   help='[random, length, loss]')
-train_parser.add_argument('--ret_frac',       default=1,      type=float, help='retention fraction for data pruning')
-train_parser.add_argument('--data_rand_seed', default=None,   type=int,   help='sets random seed for data experiments')
 
 train_parser.add_argument('--optim',   default='adamw', type=str,  help='[adam, adamw, sgd]')
 train_parser.add_argument('--wandb',   default=None,    type=str,  help='experiment name to use for wandb (and to enable)')

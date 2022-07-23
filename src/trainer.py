@@ -10,7 +10,7 @@ from collections import namedtuple
 from types import SimpleNamespace
 from typing import List, Tuple
 
-from .helpers import DataLoader, DirHelper, Batcher, make_ranker
+from .helpers import DataLoader, DirHelper, Batcher
 from .utils.torch_utils import no_grad
 from .models import select_model
 
@@ -29,7 +29,12 @@ class Trainer():
         self.data_loader = DataLoader(m_args.transformer)
         self.batcher = Batcher(max_len=m_args.max_len)
         
-        self.model = select_model(model_name=m_args.transformer)
+        #temp routing for backward compatibility
+        if hasattr(m_args, 'num_classes'):
+            self.model = select_model(model_name=m_args.transformer, num_classes=m_args.num_classes)
+        else:
+            self.model = select_model(model_name=m_args.transformer)
+
         self.device = m_args.device
                  
     def train(self, args:namedtuple):
@@ -38,11 +43,6 @@ class Trainer():
  
         train, dev, test = self.data_loader(args.data_set, args.lim)
         
-        if args.ranker:
-            ranker = make_ranker(args.ranker, args.data_rand_seed)
-            train  = ranker(train, args.ret_frac, balance=True)
-            print(f'filtered to {len(train)}')
-            
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=args.lr)
         best_epoch = (-1, 10000, 0)
         self.to(self.device)
@@ -86,7 +86,7 @@ class Trainer():
                 if args.save: self.save_model()
                 else: self.generate_probs(data=test, data_name=args.data_set)
                 
-            if epoch - best_epoch[0] >= 5:
+            if epoch - best_epoch[0] >= 3:
                 break
              
         self.dir.log(f'best dev epoch: {best_epoch}')
@@ -106,7 +106,7 @@ class Trainer():
         hits = torch.sum(hits[batch.labels != -100]).item()
         num_preds = torch.sum(batch.labels != -100).item()
 
-        return SimpleNamespace(loss=loss, y=output.y,
+        return SimpleNamespace(loss=loss, y=output.y, h=output.h,
                                hits=hits, num_preds=num_preds)
 
     ############# EVAL METHODS ####################################
@@ -175,12 +175,9 @@ class Trainer():
         cfg['epochs']      = args.epochs
         cfg['bsz']         = args.bsz
         cfg['lr']          = args.lr
-        cfg['transformer'] = self.model_args.transformer
-        
+        cfg['transformer'] = self.model_args.transformer       
         cfg['data_set']    = args.data_set
-        cfg['ret_frac']    = args.ret_frac
-        cfg['ranker']      = args.ranker
-       
+
         wandb.config.update(cfg) 
         wandb.watch(self.model)
         

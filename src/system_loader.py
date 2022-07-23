@@ -69,7 +69,16 @@ class SystemLoader(Trainer):
     @staticmethod
     def load_labels(data_name:str, mode='test')->dict:
         split_index = {'train':0, 'dev':1, 'test':2}
-        eval_data = load_data(data_name)[split_index[mode]]
+
+        if '_' not in mode:
+            eval_data = load_data(data_name)[split_index[mode]]
+        else:
+            splits = mode.split('_')
+            eval_data = []
+            for split in splits:
+                eval_data += load_data(data_name)[split_index[mode]]
+            
+        
         
         labels_dict = {}
         for k, ex in enumerate(eval_data):
@@ -85,7 +94,18 @@ class SystemLoader(Trainer):
         for k, ex in enumerate(eval_data):
             inputs_dict[k] = ex['text']
         return inputs_dict
-
+    
+    @staticmethod
+    def get_eval_data(data_name:str, mode='test'):
+        if '_' not in mode:
+            eval_data = load_data(data_name)[split_index[mode]]
+        else:
+            splits = mode.split('_')
+            eval_data = []
+            for split in splits:
+                eval_data += load_data(data_name)[split_index[mode]]
+        return eval_data
+    
 class EnsembleLoader(SystemLoader):
     def __init__(self, exp_path:str):
         self.exp_path = exp_path

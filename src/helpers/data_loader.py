@@ -40,7 +40,7 @@ class DataLoader:
     
     def get_data_split(self, data_name:str, split:str, lim:int=None):
         split_index = {'train':0, 'dev':1, 'test':2}
-        data = load_data(data_name)[split_index[split]]
+        data = load_data(data_name, lim)[split_index[split]]
         data = self.process_ids(data)
         return data
     
