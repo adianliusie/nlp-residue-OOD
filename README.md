@@ -1,1 +1,1 @@
-# data_pruning
+# Residue for OOD detection
