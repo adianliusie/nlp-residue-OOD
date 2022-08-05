@@ -4,8 +4,10 @@ from tqdm import tqdm
 from copy import deepcopy
 from typing import List, Dict, Tuple
 from datasets import load_dataset
+from functools import lru_cache
 
 ### Main Data Loading Method #############################################################
+@lru_cache(maxsize = 5)
 def load_data(data_name:str, lim:int=None)->Tuple['train', 'dev', 'test']:
     print('###################')
     print(data_name)
