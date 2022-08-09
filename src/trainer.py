@@ -93,9 +93,6 @@ class Trainer():
         return test_perf
     
     def model_output(self, batch):
-        if getattr(self, 'bias', False):
-            return self.bias_model_output(batch)
-             
         output = self.model(input_ids=batch.ids, 
                             attention_mask=batch.mask)
                 

@@ -1,9 +1,13 @@
 import torch
+import torch.nn.functional as F
+import numpy as np
+import matplotlib.pyplot as plt
 
 from transformers import BertModel
 from tqdm import tqdm
 from sklearn.decomposition import PCA
 from functools import lru_cache
+from types import SimpleNamespace
 
 from ..system_loader import SystemLoader
 from ..utils.torch_utils import no_grad
@@ -17,7 +21,7 @@ class ModelAnalyser(SystemLoader):
     def reset_model(self):
         self.model  = BertModel.from_pretrained("bert-base-uncased")
     
-    @lru_cache(maxsize = 5)
+    @lru_cache(maxsize = 10)
     @no_grad
     def get_cls_vectors(self, data_name:str, mode:str, lim:int=None, quiet=False)->dict:
         """get model predictions for given data"""
@@ -35,6 +39,7 @@ class ModelAnalyser(SystemLoader):
             CLS_vectors[sample_id] = h.cpu().numpy()
         return CLS_vectors
     
+    @lru_cache(maxsize = 10)
     @no_grad
     def get_probs(self, data_name:str, mode:str, lim:int=None, quiet=False)->dict:
         self.model.eval()
@@ -59,6 +64,25 @@ class ModelAnalyser(SystemLoader):
         assert preds.keys() == labels.keys()
         return {k: preds[k] == labels[k] for k in labels.keys()}
     
+    def model_output(self, batch):
+        """ overwrite method to not break with different labels """
+        output = self.model(input_ids=batch.ids, attention_mask=batch.mask)
+        
+        preds = torch.argmax(output.y, dim=-1)
+        if set(batch.labels.tolist()).issubset(preds.tolist()): 
+            loss = F.cross_entropy(output.y, batch.labels)
+        else:
+            loss = 0
+            
+        # return accuracy metrics
+        hits = torch.argmax(output.y, dim=-1) == batch.labels
+        hits = torch.sum(hits[batch.labels != -100]).item()
+        num_preds = torch.sum(batch.labels != -100).item()
+
+            
+        return SimpleNamespace(loss=loss, y=output.y, h=output.h,
+                               hits=hits, num_preds=num_preds)
+
 class PcaAnalyser(ModelAnalyser):
     def train_pca(self, data_name:str, mode:str, lim:int=None, quiet=False):
         self.pca = PCA()
@@ -72,4 +96,19 @@ class PcaAnalyser(ModelAnalyser):
         output = self.pca.transform(matrix)
         return output
         
+    def plot_components(self, data_name:str, mode:str, lim:int=None, quiet=False):
+        matrix = self.run_pca(data_name, mode, lim, quiet)
+        
+        #get mean and 2 std lines
+        abs_matrix = np.abs(matrix)
+        mean = np.mean(abs_matrix, axis=0)
+        lower = np.percentile(abs_matrix, 20, axis=0)
+        upper = np.percentile(abs_matrix, 80, axis=0)
+
+        #plot components
+        x = range(matrix.shape[1])
+        plt.plot(x, mean)
+        plt.fill_between(x, lower, upper, alpha=0.2)
+        
+
         

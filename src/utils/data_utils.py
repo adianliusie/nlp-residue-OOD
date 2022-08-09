@@ -9,18 +9,19 @@ from functools import lru_cache
 ### Main Data Loading Method #############################################################
 @lru_cache(maxsize = 5)
 def load_data(data_name:str, lim:int=None)->Tuple['train', 'dev', 'test']:
-    print('###################')
-    print(data_name)
-    print('###################')
+    print(f'############ {data_name} ############')
+
+    # If biased enabled, create a length bias in the data
+    if data_name.endswith('_biased'):
+        data_name = data_name.replace('_biased', '')
+        train, dev, test = create_len_bias(data_name)
     
     # If multiple datasets given, use multitask learning
-    if '_' in data_name:
-        data_names = data_name.split('_')
-        data_sets = [load_data(data_name) for data_name in data_names]
-        train, dev, test = [flatten(data) for data in zip(*data_sets)]
-        return train[:lim], dev[:lim], test[:lim]
+    elif '_' in data_name:
+        train, dev, test = join_multiple_datasets(data_name)
     
-    if   data_name == 'imdb':   train, dev, test = _load_imdb()
+    # Otherwise load the standard data
+    elif data_name == 'imdb':   train, dev, test = _load_imdb()
     elif data_name == 'rt':     train, dev, test = _load_rotten_tomatoes()
     elif data_name == 'sst':    train, dev, test = _load_sst()
     elif data_name == 'sst2':   train, dev, test = _load_sst2()
@@ -31,14 +32,47 @@ def load_data(data_name:str, lim:int=None)->Tuple['train', 'dev', 'test']:
     elif data_name == 'mnli':   train, dev, test = _load_mnli()
     elif data_name == 'hans':   train, dev, test = _load_hans()
     else: raise ValueError('invalid dataset provided')
+        
+    # For debugging, can return a subset of the data
     if lim:
         train = get_data_sample(train, lim)
         dev   = get_data_sample(dev, lim)
         test  = get_data_sample(test, lim)
+        
     return train, dev, test
 
 def flatten(x):
     return [i for j in x for i in j]
+
+def join_multiple_datasets(data_name):
+    data_names = data_name.split('_')
+    data_sets = [load_data(data_name) for data_name in data_names]
+    train, dev, test = [flatten(data) for data in zip(*data_sets)]
+    return train[:lim], dev[:lim], test[:lim]
+    
+def create_len_bias(data_name):
+    train, dev, test = load_data(data_name)
+    train, dev = [_class_divide(split) for split in [train, dev]]
+    return train, dev, test
+
+def _class_divide(data_split):
+    labels = set([x['label'] for x in data_split])
+    
+    # Split data set by classes, and order by len
+    classes_split = {}
+    for label in labels:
+        class_split = [x for x in data_split if x['label'] == label]
+        classes_split[label] = sorted(class_split, key=lambda x: len(x['text']))
+    
+    # introduce natural length shortcuts in data
+    output = []
+    for k, class_examples in classes_split.items():
+        ex_range = len(class_examples)/len(labels)
+        r1, r2 = int(k*ex_range), int((k+1)*ex_range)
+        selected_ex = class_examples[r1:r2]
+        output += selected_ex
+        
+    return output
 
 ### Individual Data set Loader Functions #################################################
 def _load_imdb()->List[Dict['text', 'label']]:
@@ -92,31 +126,13 @@ def _load_rotten_tomatoes():
     test  = list(dataset['test'])
     return train, dev, test
 
-"""
-def _load_sst2():
+def _load_sst():
     dataset = load_dataset('glue', 'sst2')
     train_data = list(dataset['train'])
     train, dev = _create_splits(train_data, 0.8)
     test       = list(dataset['validation'])
     
     train, dev, test = _rename_keys(train, dev, test, old_key='sentence', new_key='text')
-    return train, dev, test
-"""
-
-def _load_sst()->List[Dict['text', 'label']]:
-    def _invert_labels(ex:dict):
-        ex = ex.copy()
-        ex['label'] = 1 - ex['label']
-        return ex
-
-    dataset = load_dataset("gpt3mix/sst2")
-    train = list(dataset['train'])
-    dev   = list(dataset['validation'])
-    test  = list(dataset['test'])
-    
-    train = [_invert_labels(ex) for ex in train]
-    dev   = [_invert_labels(ex) for ex in dev]
-    test  = [_invert_labels(ex) for ex in test]
     return train, dev, test
 
 def _load_hans()->List[Dict['text_1', 'label']]:
@@ -186,3 +202,35 @@ def _rename_key(ex:dict, old_key:str='content', new_key:str='text'):
     ex = ex.copy()
     ex[new_key] = ex.pop(old_key)
     return ex
+
+"""
+old method that splits using median
+
+def _class_divide(data_split):
+    labels = set([x['label'] for x in data_split])
+    
+    # Split data set by classes, and order by len
+    classes_split = {}
+    for label in labels:
+        class_split = [x for x in data_split if x['label'] == label]
+        classes_split[label] = sorted(class_split, key=lambda x: len(x['text']))
+    
+    #calculate median length per class
+    class_medians = []
+    for label, examples in classes_split.items():
+        median_ex = examples[(len(examples)-1)//2]
+        median_len = len(median_ex['text'])
+        class_medians.append((label, median_len))
+        
+    # introduce natural length shortcuts in data
+    output = []
+    sorted_medians = sorted(class_medians, key=lambda x:x[1])
+    for k, (label, _) in enumerate(sorted_medians):
+        class_examples = classes_split[label]
+        ex_range = len(class_examples)/len(labels)
+        r1, r2 = int(k*ex_range), int((k+1)*ex_range)
+        selected_ex = class_examples[r1:r2]
+        output += selected_ex
+        
+    return output
+"""
