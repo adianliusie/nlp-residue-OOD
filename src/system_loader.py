@@ -67,19 +67,10 @@ class SystemLoader(Trainer):
         return probabilties
     
     @staticmethod
-    def load_labels(data_name:str, mode='test')->dict:
+    def load_labels(data_name:str, mode='test', lim=None)->dict:
         split_index = {'train':0, 'dev':1, 'test':2}
-
-        if '_' not in mode:
-            eval_data = load_data(data_name)[split_index[mode]]
-        else:
-            splits = mode.split('_')
-            eval_data = []
-            for split in splits:
-                eval_data += load_data(data_name)[split_index[mode]]
-            
-        
-        
+        eval_data = load_data(data_name, lim)[split_index[mode]]
+           
         labels_dict = {}
         for k, ex in enumerate(eval_data):
             labels_dict[k] = ex['label']

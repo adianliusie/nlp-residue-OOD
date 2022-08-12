@@ -78,8 +78,6 @@ class ModelAnalyser(SystemLoader):
         hits = torch.argmax(output.y, dim=-1) == batch.labels
         hits = torch.sum(hits[batch.labels != -100]).item()
         num_preds = torch.sum(batch.labels != -100).item()
-
-            
         return SimpleNamespace(loss=loss, y=output.y, h=output.h,
                                hits=hits, num_preds=num_preds)
 

@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 
 from typing import List
 
+def FScore(P, R, b=1):
+    return ((1+(b**2)) * (P*R)) / ((P*(b**2))+R)
+    
 def get_accuracy(preds:dict, labels:dict):
     perf = np.zeros(2)
     for sample_id, label in labels.items():
